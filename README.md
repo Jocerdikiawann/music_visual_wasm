@@ -1,1 +1,3 @@
-# music_visual_wasm
+## music_visual_wasm
+
+reference : [Tsoding](https://youtube.com/playlist?list=PLpM-Dvs8t0Vak1rrE2NJn8XYEJ5M7-BqT&si=MXA-Z-ewLH4p3xdj)
