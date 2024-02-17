@@ -1,3 +1,4 @@
 *.html
 *.wasm
 *.js
+*.data
