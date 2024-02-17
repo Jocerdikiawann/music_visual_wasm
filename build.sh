@@ -23,7 +23,7 @@ shift $((OPTIND -1))
 
 if [ "$Platform" = "web" ] ; then
     echo "Building for web..."
-    emcc -o game.html main.c -Os -Wall $HOME/Documents/raylib/src/libraylib.a -I. -I$HOME/Documents/raylib/src/ -L. -L$HOME/Documents/raylib/src/ -s USE_GLFW=3 -s ASYNCIFY --shell-file $HOME/Documents/raylib/src/shell.html -DPLATFORM_WEB
+    emcc -o game.html main.c -Os -Wall -Wextra $HOME/Documents/raylib/src/libraylib.a -I. -I$HOME/Documents/raylib/src/ -L. -L$HOME/Documents/raylib/src/ -s USE_GLFW=3 -s ASYNCIFY --shell-file $HOME/Documents/raylib/src/shell.html -DPLATFORM_WEB --preload-file ./videoplayback.ogg -s ALLOW_MEMORY_GROWTH=1
     emrun game.html
 elif [ "$Platform" = "android" ] ; then
     echo "Building for android..."

@@ -5,7 +5,7 @@ int main() {
 
   InitAudioDevice();
 
-  Sound sound = LoadSound("videoplayback.ogg");
+  Sound sound = LoadSound("./videoplayback.ogg");
   SetTargetFPS(60);
 
   while (!WindowShouldClose()) {
