@@ -1,10 +1,6 @@
 #include "screen.h"
 #include "visual.h"
 
-#if defined(PLATFORM_WEB)
-#include <emscripten.h>
-#endif /* ifdef  defined(PLATFORM_WEB) */
-
 ScreenVisualizer sv = {.screenHeight = 450, .screenWidth = 800};
 MusicVisualizer mv = {
     .volume = 0.5f,
