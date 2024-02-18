@@ -23,7 +23,6 @@ int main() {
   music.looping = false;
 
 #if defined(PLATFORM_WEB)
-
   emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
 #else
   SetTargetFPS(60);
@@ -31,9 +30,7 @@ int main() {
   while (!WindowShouldClose()) {
     UpdateDrawFrame();
   }
-#endif /* if defined(PLATFORM_WEB)                                               \
-                                                                               \ \
-   */
+#endif /* if defined(PLATFORM_WEB) */
 
   UnloadMusicStream(music);
 
