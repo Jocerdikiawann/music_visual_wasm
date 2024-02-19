@@ -62,7 +62,7 @@ void CreateMusic(MusicVisualizer *mv) {
   pi = atan2(1, 1) * 4;
   InitAudioDevice();
 
-  mv->music = LoadMusicStream("./videoplayback.ogg");
+  mv->music = LoadMusicStream("./music.ogg");
 
   mv->music.looping = false;
 
