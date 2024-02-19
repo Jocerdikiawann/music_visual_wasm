@@ -1,7 +1,6 @@
 #include "visual.h"
 
 double pi;
-typedef double complex cplx;
 
 void _fft(cplx buf[], cplx out[], int n, int step) {
   if (step < n) {
@@ -50,14 +49,24 @@ void CreateMusic(MusicVisualizer *mv) {
   }
 
   ConstructWindows(mv);
+
+  cplx samples[mv->sampleBufferSize];
+  mv->maxSampleIndex = MIN(mv->sampleBufferSize / 2.f, 20000.f);
+  mv->rawBucketMultiplier =
+      pow(10, log((float)BUFFER_SIZE / 2) / (double)RAW_BUCKET_COUNT);
+  mv->rawBucketPerOutput = RAW_BUCKET_COUNT / OUTPUT_BUCKET_COUNT;
 }
 
 void UpdateDrawFrame(MusicVisualizer *mv, ScreenVisualizer *sv) {
   UpdateMusicStream(mv->music);
 
   if (IsKeyPressed(KEY_SPACE)) {
-    StopMusicStream(mv->music);
-    PlayMusicStream(mv->music);
+    if (IsMusicStreamPlaying(mv->music))
+      StopMusicStream(mv->music);
+    else {
+      mv->frameNumber = 0;
+      PlayMusicStream(mv->music);
+    }
   }
 
   if (IsKeyPressed(KEY_P)) {

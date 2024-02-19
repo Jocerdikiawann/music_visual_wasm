@@ -13,13 +13,20 @@
 #define BUFFER_SIZE 16384
 #define RAW_BUCKET_COUNT 200
 #define OUTPUT_BUCKET_COUNT 4
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+typedef double _Complex cplx;
 
 typedef struct MusicVisualizer {
   Music music;
   float volume, timeplayed;
   unsigned int sampleRate, sampleBufferSize;
   float *windowCache;
-  double complex cplx;
+  cplx samples;
+  float maxSampleIndex;
+  double rawBucketMultiplier;
+  int rawBucketPerOutput;
+  int frameNumber;
 } MusicVisualizer;
 
 void CreateMusic(MusicVisualizer *mv);
