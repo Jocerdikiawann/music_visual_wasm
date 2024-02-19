@@ -1,12 +1,55 @@
 #include "visual.h"
 
+double pi;
+typedef double complex cplx;
+
+void _fft(cplx buf[], cplx out[], int n, int step) {
+  if (step < n) {
+    _fft(out, buf, n, step * 2);
+    _fft(out + step, buf + step, n, step * 2);
+    for (int i = 0; i < n; i += 2 * step) {
+      cplx t = cexp(-I * pi * i / n) * out[i + step];
+      buf[i / 2] = out[i] + t;
+      buf[(i + n) / 2] = out[i] - t;
+    }
+  }
+}
+
+void fft(cplx buf[], int n) {
+  cplx out[n];
+  for (int i = 0; i < n; i++)
+    out[i] = buf[i];
+  _fft(buf, out, n, 1);
+}
+
+void ConstructWindows(MusicVisualizer *mv) {
+  float *temp = (float *)malloc(sizeof(float) * mv->sampleBufferSize);
+  if (temp == NULL) {
+    printf("Failed allocate memory\n");
+    exit(1);
+  }
+  for (int i = 0; i < mv->sampleBufferSize; i++) {
+    temp[i] = 0.54 - 0.46 * cos(2 * M_PI * i / (float)mv->sampleBufferSize);
+  }
+  mv->windowCache = temp;
+  free(temp);
+  temp = NULL;
+}
+
 void CreateMusic(MusicVisualizer *mv) {
 
   InitAudioDevice();
+  mv->sampleBufferSize = BUFFER_SIZE;
 
   mv->music = LoadMusicStream("./videoplayback.ogg");
 
   mv->music.looping = false;
+  mv->sampleRate = mv->music.stream.sampleRate * mv->music.stream.channels;
+  if (mv->sampleBufferSize > mv->music.stream.sampleSize) {
+    mv->sampleBufferSize = mv->music.stream.sampleSize;
+  }
+
+  ConstructWindows(mv);
 }
 
 void UpdateDrawFrame(MusicVisualizer *mv, ScreenVisualizer *sv) {
