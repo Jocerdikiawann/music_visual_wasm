@@ -1,60 +1,72 @@
 #include "visual.h"
 
-double pi;
+float pi;
+float in[N];
+float complex out[N];
+float max_amp;
 
-void _fft(cplx buf[], cplx out[], int n, int step) {
+typedef struct {
+  float left, right;
+} Frame;
+
+float amp(float complex z) {
+  float a = fabsf(crealf(z));
+  float b = fabsf(cimagf(z));
+  if (a < b)
+    return b;
+  return a;
+}
+
+void _fft(float complex buf[], float complex out[], int n, int step) {
   if (step < n) {
-    _fft(out, buf, n, step * 2);
-    _fft(out + step, buf + step, n, step * 2);
+    _fft(out, buf, n / 2, step * 2);
+    _fft(out + step, buf + step / 2, n / 2, step * 2);
+
     for (int i = 0; i < n; i += 2 * step) {
-      cplx t = cexp(-I * pi * i / n) * out[i + step];
+      double complex t = cexp(-I * PI * i / n) * out[i + step / 2];
       buf[i / 2] = out[i] + t;
       buf[(i + n) / 2] = out[i] - t;
     }
   }
 }
 
-void fft(cplx buf[], int n) {
-  cplx out[n];
+void fft(float complex buf[], int n) {
+  float complex out[n];
   for (int i = 0; i < n; i++)
     out[i] = buf[i];
+
   _fft(buf, out, n, 1);
 }
 
-void ConstructWindows(MusicVisualizer *mv) {
-  float *temp = (float *)malloc(sizeof(float) * mv->sampleBufferSize);
-  if (temp == NULL) {
-    printf("Failed allocate memory\n");
-    exit(1);
+void ProcessAudio(void *buffer, unsigned int frames) {
+  if (frames < N)
+    return;
+
+  Frame *frame = buffer;
+  for (size_t i = 0; i < frames; ++i) {
+    in[i] = frame[i].left;
   }
-  for (int i = 0; i < mv->sampleBufferSize; i++) {
-    temp[i] = 0.54 - 0.46 * cos(2 * M_PI * i / (float)mv->sampleBufferSize);
+  fft(out, N);
+
+  max_amp = 0.0f;
+  for (size_t i = 0; i < N; i++) {
+
+    float c = amp(out[i]);
+    if (max_amp < c)
+      max_amp = c;
   }
-  mv->windowCache = temp;
-  free(temp);
-  temp = NULL;
 }
 
 void CreateMusic(MusicVisualizer *mv) {
 
+  pi = atan2(1, 1) * 4;
   InitAudioDevice();
-  mv->sampleBufferSize = BUFFER_SIZE;
 
   mv->music = LoadMusicStream("./videoplayback.ogg");
 
   mv->music.looping = false;
-  mv->sampleRate = mv->music.stream.sampleRate * mv->music.stream.channels;
-  if (mv->sampleBufferSize > mv->music.stream.sampleSize) {
-    mv->sampleBufferSize = mv->music.stream.sampleSize;
-  }
 
-  ConstructWindows(mv);
-
-  cplx samples[mv->sampleBufferSize];
-  mv->maxSampleIndex = MIN(mv->sampleBufferSize / 2.f, 20000.f);
-  mv->rawBucketMultiplier =
-      pow(10, log((float)BUFFER_SIZE / 2) / (double)RAW_BUCKET_COUNT);
-  mv->rawBucketPerOutput = RAW_BUCKET_COUNT / OUTPUT_BUCKET_COUNT;
+  AttachAudioStreamProcessor(mv->music.stream, ProcessAudio);
 }
 
 void UpdateDrawFrame(MusicVisualizer *mv, ScreenVisualizer *sv) {
@@ -64,7 +76,6 @@ void UpdateDrawFrame(MusicVisualizer *mv, ScreenVisualizer *sv) {
     if (IsMusicStreamPlaying(mv->music))
       StopMusicStream(mv->music);
     else {
-      mv->frameNumber = 0;
       PlayMusicStream(mv->music);
     }
   }
@@ -89,6 +100,14 @@ void UpdateDrawFrame(MusicVisualizer *mv, ScreenVisualizer *sv) {
 
   BeginDrawing();
   ClearBackground(RAYWHITE);
+  float cellWidth = (float)sv->screenWidth / N;
+  for (size_t i = 0; i < N; ++i) {
+    float t = amp(out[i]) / max_amp;
+    DrawRectangle(i * cellWidth,
+                  (float)sv->screenHeight - 30 -
+                      (float)sv->screenHeight / 2 * t,
+                  cellWidth, (float)sv->screenHeight / 2 * t, RED);
+  }
   DrawRectangle(20, sv->screenHeight - 20 - 12, sv->screenWidth - 40, 12,
                 LIGHTGRAY);
   DrawRectangle(20, sv->screenHeight - 20 - 12, (int)mv->timeplayed, 12,

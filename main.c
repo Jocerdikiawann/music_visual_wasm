@@ -1,14 +1,10 @@
 #include "screen.h"
 #include "visual.h"
 
-ScreenVisualizer sv = {.screenHeight = 450, .screenWidth = 800};
+ScreenVisualizer sv = {.screenHeight = 768, .screenWidth = 1024};
 MusicVisualizer mv = {
     .volume = 0.5f,
     .timeplayed = 0.0f,
-    .maxSampleIndex = 20000.0f,
-    .rawBucketMultiplier = 1.05f,
-    .rawBucketPerOutput = 0,
-    .frameBuffer = 0,
 };
 
 void UpdateDrawFrameWrapper(void) { UpdateDrawFrame(&mv, &sv); }
