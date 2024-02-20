@@ -1,13 +1,8 @@
 #include "visual.h"
+#include <string.h>
 
-float pi;
-float in[N];
+float complex in[N];
 float complex out[N];
-float max_amp;
-
-typedef struct {
-  float left, right;
-} Frame;
 
 float amp(float complex z) {
   float a = fabsf(crealf(z));
@@ -17,49 +12,34 @@ float amp(float complex z) {
   return a;
 }
 
-void _fft(float complex buf[], float complex out[], int n, int step) {
-  if (step < n) {
-    _fft(out, buf, n / 2, step * 2);
-    _fft(out + step, buf + step / 2, n / 2, step * 2);
-
-    for (int i = 0; i < n; i += 2 * step) {
-      double complex t = cexp(-I * PI * i / n) * out[i + step / 2];
-      buf[i / 2] = out[i] + t;
-      buf[(i + n) / 2] = out[i] - t;
-    }
+void fft(float complex in[], size_t stride, float complex out[], size_t n) {
+  assert(n > 0);
+  if (n == 1) {
+    out[0] = in[0];
+    return;
   }
-}
 
-void fft(float complex buf[], int n) {
-  float complex out[n];
-  for (int i = 0; i < n; i++)
-    out[i] = buf[i];
-
-  _fft(buf, out, n, 1);
+  fft(in, stride * 2, out, n / 2);
+  fft(in + stride, stride * 2, out + n / 2, n / 2);
+  for (size_t k = 0; k < n / 2; ++k) {
+    float t = (float)k / n;
+    float complex v = cexp(-2 * I * PI * t) * out[k + n / 2];
+    float complex e = out[k];
+    out[k] = e + v;
+    out[k + n / 2] = e - v;
+  }
 }
 
 void ProcessAudio(void *buffer, unsigned int frames) {
-  if (frames < N)
-    return;
-
-  Frame *frame = buffer;
+  float complex *frame = buffer;
   for (size_t i = 0; i < frames; ++i) {
-    in[i] = frame[i].left;
-  }
-  fft(out, N);
-
-  max_amp = 0.0f;
-  for (size_t i = 0; i < N; i++) {
-
-    float c = amp(out[i]);
-    if (max_amp < c)
-      max_amp = c;
+    memmove(in, in + 1, (N - 1) * sizeof(in[0]));
+    in[N - 1] = frame[i];
   }
 }
 
 void CreateMusic(MusicVisualizer *mv) {
 
-  pi = atan2(1, 1) * 4;
   InitAudioDevice();
 
   mv->music = LoadMusicStream("./music.ogg");
@@ -97,16 +77,39 @@ void UpdateDrawFrame(MusicVisualizer *mv, ScreenVisualizer *sv) {
 
   mv->timeplayed = GetMusicTimePlayed(mv->music) /
                    GetMusicTimeLength(mv->music) * (sv->screenWidth - 40);
+  fft(in, 1, out, N);
+
+  float max_amp = 0.0f;
+  for (size_t i = 0; i < N; i++) {
+    float c = amp(out[i]);
+    if (max_amp < c)
+      max_amp = c;
+  }
+
+  float step = 1.06;
+  size_t m = 0;
+  for (float freq = 20.0f; (size_t)freq < N; freq *= step) {
+    m += 1;
+  }
+
+  float cellWidth = (float)sv->screenWidth / m;
+  m = 0;
 
   BeginDrawing();
   ClearBackground(RAYWHITE);
-  float cellWidth = (float)sv->screenWidth / N;
-  for (size_t i = 0; i < N; ++i) {
-    float t = amp(out[i]) / max_amp;
-    DrawRectangle(i * cellWidth,
+  for (float freq = 20.0f; (size_t)freq < N; freq *= step) {
+    float f = freq * step;
+    float a = 0.0f;
+    for (size_t q = (size_t)freq; q < N && q < (size_t)f; ++q) {
+      a += amp(out[q]);
+    }
+    a /= (size_t)f - (size_t)freq + 1;
+    float t = a / max_amp;
+    DrawRectangle(m * cellWidth,
                   (float)sv->screenHeight - 30 -
                       (float)sv->screenHeight / 2 * t,
-                  cellWidth, (float)sv->screenHeight / 2 * t, RED);
+                  cellWidth, (float)sv->screenWidth / 2 * t, MAROON);
+    m += 1;
   }
   DrawRectangle(20, sv->screenHeight - 20 - 12, sv->screenWidth - 40, 12,
                 LIGHTGRAY);

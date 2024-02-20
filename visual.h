@@ -6,7 +6,7 @@
 #include "screen.h"
 
 #define ARRAY_LEN(xs) sizeof(xs) / sizeof(xs[0])
-#define N 256
+#define N (1 << 13)
 
 typedef struct MusicVisualizer {
   Music music;
