@@ -13,10 +13,8 @@ typedef struct MusicVisualizer {
   float volume, timeplayed;
 } MusicVisualizer;
 
-void CreateMusic(MusicVisualizer *mv);
-void ConstructWindows(MusicVisualizer *mv);
-void CollectSamples(MusicVisualizer *mv);
-void UpdateDrawFrame(MusicVisualizer *mv, ScreenVisualizer *sv);
-void DestroyMusic(MusicVisualizer *mv);
+void CreateMusic();
+void UpdateDrawFrame(ScreenVisualizer *sv);
+void DestroyMusic();
 
 #endif // !VISUAL_H

@@ -4,11 +4,11 @@
 #include <emscripten.h>
 #endif /* ifdef  defined(PLATFORM_WEB) */
 #include "assert.h"
-#include "string.h"
 #include <complex.h>
 #include <math.h>
 #include <raylib.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #endif // !EXT_H
