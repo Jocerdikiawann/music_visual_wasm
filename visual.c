@@ -3,16 +3,16 @@
 MusicVisualizer mv = {
     .volume = 0.2f,
     .timeplayed = 0.0f,
+    .smoothness = 8.,
 };
 
-float in[N];
-float window[N];
 float complex out[N];
+float outLog[N], smooth[N], window[N], in[N];
 
 float Amp(float complex z) {
   // float a = crealf(z);
   // float b = cimagf(z);
-  // return logf(a*a + b*b);
+  // return logf(a * a + b * b) ;
   return cabsf(z);
 }
 
@@ -127,25 +127,10 @@ void UpdateDrawFrame(ScreenVisualizer *sv) {
 
   Fft(window, 1, out, N);
 
-  float max_amp = 0.0f;
-  for (size_t i = 0; i < N; i++) {
-    float c = Amp(out[i]);
-    if (max_amp < c)
-      max_amp = c;
-  }
-
+  float max_amp = 1.0f;
   float step = 1.06;
   float lowFreq = 1.0f;
   size_t m = 0;
-  for (float freq = lowFreq; (size_t)freq < N / 2; freq = ceilf(freq * step)) {
-    m += 1;
-  }
-
-  float cellWidth = (float)sv->screenWidth / m;
-  m = 0;
-
-  BeginDrawing();
-  ClearBackground(RAYWHITE);
   for (float freq = lowFreq; (size_t)freq < N / 2; freq = ceilf(freq * step)) {
     float f = ceilf(freq * step);
     float a = 0.0f;
@@ -154,12 +139,28 @@ void UpdateDrawFrame(ScreenVisualizer *sv) {
       if (b > a)
         a = b;
     }
-    float t = a / max_amp;
-    DrawRectangle(m * cellWidth,
-                  (float)(sv->screenHeight - 40) -
-                      (float)sv->screenHeight / 2 * t,
-                  cellWidth, (float)sv->screenHeight / 2 * t, MAROON);
-    m += 1;
+    if (max_amp < a)
+      max_amp = a;
+    outLog[m++] = a;
+  }
+
+  for (size_t i = 0; i < m; ++i) {
+    outLog[i] /= max_amp;
+  }
+
+  float frameTime = GetFrameTime();
+  for (size_t i = 0; i < m; ++i) {
+    smooth[i] += (outLog[i] - smooth[i]) * mv.smoothness * frameTime;
+  }
+
+  float cellWidth = (float)sv->screenWidth / m;
+  BeginDrawing();
+  ClearBackground(RAYWHITE);
+  for (size_t i = 0; i < m; ++i) {
+    float t = smooth[i];
+    DrawRectangle(i * cellWidth,
+                  (sv->screenHeight - 40) - (float)sv->screenHeight / 3 * t,
+                  cellWidth, (float)sv->screenHeight / 3 * t, MAROON);
   }
   DrawRectangle(20, sv->screenHeight - 42, sv->screenWidth - 40, 12, LIGHTGRAY);
   DrawRectangle(20, sv->screenHeight - 42, (int)mv.timeplayed, 12, MAROON);

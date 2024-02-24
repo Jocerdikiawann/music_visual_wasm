@@ -10,7 +10,7 @@
 
 typedef struct MusicVisualizer {
   Music music;
-  float volume, timeplayed;
+  float volume, timeplayed, frameTime, smoothness;
 } MusicVisualizer;
 
 void CreateMusic();
