@@ -9,5 +9,6 @@ typedef struct ScreenVisualizer {
 } ScreenVisualizer;
 
 void CreateWindow(ScreenVisualizer *sv);
+void FullScreenWindow(ScreenVisualizer *sv);
 void DestroyWindow();
 #endif // !SCREEN_H

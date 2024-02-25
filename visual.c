@@ -1,4 +1,5 @@
 #include "visual.h"
+#include <raylib.h>
 
 MusicVisualizer mv = {
     .volume = 0.2f,
@@ -10,10 +11,10 @@ float complex out[N];
 float outLog[N], smooth[N], window[N], in[N];
 
 float Amp(float complex z) {
-  // float a = crealf(z);
-  // float b = cimagf(z);
-  // return logf(a * a + b * b) ;
-  return cabsf(z);
+  float a = crealf(z);
+  float b = cimagf(z);
+  return logf(a * a + b * b);
+  // return cabsf(z);
 }
 
 void Fft(float in[], size_t stride, float complex out[], size_t n) {
@@ -73,6 +74,7 @@ void DragAndDropFiles() {
   char *path = droppedFiles.paths[0];
   if (IsFileExtension(path, ".ogg") || IsFileExtension(path, ".mp3")) {
     mv.music = LoadMusicStream(path);
+    mv.music.looping = false;
     AttachAudioStreamProcessor(mv.music.stream, ProcessAudio);
     PlayMusicStream(mv.music);
   }
@@ -101,9 +103,10 @@ void UpdateDrawFrame(ScreenVisualizer *sv) {
     else
       ResumeMusicStream(mv.music);
   }
-  if (IsKeyDown(KEY_DOWN) && mv.volume > 0.1f) {
+
+  if (IsKeyPressed(KEY_DOWN) && mv.volume > 0.1f) {
     mv.volume -= 0.1f;
-  } else if (IsKeyDown(KEY_UP) && mv.volume < 1.0f) {
+  } else if (IsKeyPressed(KEY_UP) && mv.volume < 1.0f) {
     mv.volume += 0.1f;
   }
 
@@ -144,12 +147,10 @@ void UpdateDrawFrame(ScreenVisualizer *sv) {
     outLog[m++] = a;
   }
 
-  for (size_t i = 0; i < m; ++i) {
-    outLog[i] /= max_amp;
-  }
-
   float frameTime = GetFrameTime();
   for (size_t i = 0; i < m; ++i) {
+    outLog[i] /= max_amp;
+
     smooth[i] += (outLog[i] - smooth[i]) * mv.smoothness * frameTime;
   }
 
@@ -158,16 +159,16 @@ void UpdateDrawFrame(ScreenVisualizer *sv) {
   ClearBackground(RAYWHITE);
   for (size_t i = 0; i < m; ++i) {
     float t = smooth[i];
-    DrawRectangle(i * cellWidth,
+    DrawRectangle(i * cellWidth + 20,
                   (sv->screenHeight - 40) - (float)sv->screenHeight / 3 * t,
-                  cellWidth, (float)sv->screenHeight / 3 * t, MAROON);
+                  cellWidth - 1, (float)sv->screenHeight / 3 * t, MAROON);
   }
-  DrawRectangle(20, sv->screenHeight - 42, sv->screenWidth - 40, 12, LIGHTGRAY);
-  DrawRectangle(20, sv->screenHeight - 42, (int)mv.timeplayed, 12, MAROON);
-  DrawRectangleLines(20, sv->screenHeight - 42, sv->screenWidth - 40, 12, GRAY);
+  DrawRectangle(20, sv->screenHeight - 40, sv->screenWidth - 40, 12, LIGHTGRAY);
+  DrawRectangle(20, sv->screenHeight - 40, (int)mv.timeplayed, 12, MAROON);
+  DrawRectangleLines(20, sv->screenHeight - 40, sv->screenWidth - 40, 12, GRAY);
   DrawText(TextFormat("%.02d : %.02d - %.02d : %.02d", minutes, seconds,
                       minutesLength, secondsLength),
-           20, sv->screenHeight - 27, 20, BLACK);
+           20, sv->screenHeight - 25, 20, BLACK);
   DrawText("Press SPACE to PLAY/STOP Music", 40, 40, 20, BLACK);
   DrawText("Press P to pause Music", 40, 70, 20, BLACK);
   DrawText("Press ARROW UP / ARROW DOWN to change volume", 40, 100, 20, BLACK);

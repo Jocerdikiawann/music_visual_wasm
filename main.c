@@ -1,7 +1,7 @@
 #include "screen.h"
 #include "visual.h"
 
-ScreenVisualizer sv = {.screenHeight = 768, .screenWidth = 1024};
+ScreenVisualizer sv = {.screenHeight = 600, .screenWidth = 800};
 
 void UpdateDrawFrameWrapper(void) { UpdateDrawFrame(&sv); }
 
