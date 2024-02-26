@@ -1,11 +1,13 @@
 #include "visual.h"
 
 typedef float complex Cplx;
+
 typedef struct {
   Music music;
   float volume, timeplayed, frameTime, smoothness, outLog[BUFFER_SIZE],
       smooth[BUFFER_SIZE], window[BUFFER_SIZE], in[BUFFER_SIZE];
   Cplx out[BUFFER_SIZE];
+  bool menu;
 } MusicVisualizer;
 
 MusicVisualizer mv = {
@@ -18,7 +20,6 @@ float Amp(Cplx z) {
   float a = crealf(z);
   float b = cimagf(z);
   return logf(a * a + b * b);
-  // return cabsf(z);
 }
 
 void Fft(float in[], size_t stride, Cplx out[], size_t n) {
@@ -39,20 +40,12 @@ void Fft(float in[], size_t stride, Cplx out[], size_t n) {
   }
 }
 
-void ProcessAudio(void *buffer, unsigned int frames) {
+void process_audio(void *buffer, unsigned int frames) {
   float(*frame)[2] = buffer;
   for (size_t i = 0; i < frames; ++i) {
     memmove(mv.in, mv.in + 1, (BUFFER_SIZE - 1) * sizeof(mv.in[0]));
     mv.in[BUFFER_SIZE - 1] = frame[i][0];
   }
-}
-
-void ClearSamples() {
-  memset(mv.in, 0, sizeof(mv.in));
-  memset(mv.out, 0, sizeof(mv.out));
-  memset(mv.outLog, 0, sizeof(mv.outLog));
-  memset(mv.window, 0, sizeof(mv.window));
-  memset(mv.smooth, 0, sizeof(mv.smooth));
 }
 
 void CreateMusic() {
@@ -63,27 +56,76 @@ void CreateMusic() {
 
   mv.music.looping = false;
 
-  AttachAudioStreamProcessor(mv.music.stream, ProcessAudio);
+  AttachAudioStreamProcessor(mv.music.stream, process_audio);
 }
 
-void DragAndDropFiles() {
+void clear_samples() {
+  memset(mv.in, 0, sizeof(mv.in));
+  memset(mv.out, 0, sizeof(mv.out));
+  memset(mv.outLog, 0, sizeof(mv.outLog));
+  memset(mv.window, 0, sizeof(mv.window));
+  memset(mv.smooth, 0, sizeof(mv.smooth));
+}
+
+void stop_music() {
+  StopMusicStream(mv.music);
+  DetachAudioStreamProcessor(mv.music.stream, process_audio);
+  clear_samples();
+}
+
+void play_music() {
+  AttachAudioStreamProcessor(mv.music.stream, process_audio);
+  PlayMusicStream(mv.music);
+}
+
+void open_menu(ScreenVisualizer *sv) {
+  if (mv.menu) {
+    DrawRectangle(20, 35, sv->screenWidth / 3, sv->screenHeight * 0.8,
+                  LIGHTGRAY);
+    DrawRectangleLines(20, 35, (sv->screenWidth / 3), sv->screenHeight * 0.8,
+                       BLACK);
+  }
+}
+
+void draw_menu() {
+  for (size_t i = 1; i <= 3; ++i) {
+    Rectangle burger_item_boundary = {
+        .x = 20,
+        .y = 8,
+        .width = 50,
+        .height = 5,
+    };
+    Color burger_color = LIGHTGRAY;
+    if (GetMousePosition().y <= burger_item_boundary.y * 3 &&
+        GetMousePosition().y >= burger_item_boundary.y &&
+        GetMousePosition().x >= burger_item_boundary.x &&
+        GetMousePosition().x <= burger_item_boundary.width + 1) {
+      if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && i == 1) {
+        mv.menu = !mv.menu;
+      }
+      burger_color = MAROON;
+    }
+    burger_item_boundary.y *= i;
+    DrawRectangleRec(burger_item_boundary, burger_color);
+  }
+}
+
+void drag_and_drop_files() {
   FilePathList droppedFiles = LoadDroppedFiles();
   if (droppedFiles.count <= 0) {
     UnloadDroppedFiles(droppedFiles);
     return;
   }
-  ClearSamples();
+  clear_samples();
   if (IsMusicStreamPlaying(mv.music)) {
-    StopMusicStream(mv.music);
-    DetachAudioStreamProcessor(mv.music.stream, ProcessAudio);
+    stop_music();
     UnloadMusicStream(mv.music);
   }
   char *path = droppedFiles.paths[0];
   if (IsFileExtension(path, ".ogg") || IsFileExtension(path, ".mp3")) {
     mv.music = LoadMusicStream(path);
     mv.music.looping = false;
-    AttachAudioStreamProcessor(mv.music.stream, ProcessAudio);
-    PlayMusicStream(mv.music);
+    play_music();
   }
   UnloadDroppedFiles(droppedFiles);
 }
@@ -91,16 +133,13 @@ void DragAndDropFiles() {
 void UpdateDrawFrame(ScreenVisualizer *sv) {
   UpdateMusicStream(mv.music);
   if (IsFileDropped()) {
-    DragAndDropFiles();
+    drag_and_drop_files();
   }
   if (IsKeyPressed(KEY_SPACE)) {
     if (IsMusicStreamPlaying(mv.music)) {
-      StopMusicStream(mv.music);
-      DetachAudioStreamProcessor(mv.music.stream, ProcessAudio);
-      ClearSamples();
+      stop_music();
     } else {
-      AttachAudioStreamProcessor(mv.music.stream, ProcessAudio);
-      PlayMusicStream(mv.music);
+      play_music();
     }
   }
 
@@ -178,9 +217,6 @@ void UpdateDrawFrame(ScreenVisualizer *sv) {
                       minutesLength, secondsLength),
            20, sv->screenHeight - 25, TEXT_SIZE, BLACK);
 
-  for (size_t i = 1; i <= 3; ++i) {
-    DrawRectangle(20, 8 * i, 50, 5, MAROON);
-  }
   for (size_t i = 0; i < m; ++i) {
     float t = mv.smooth[i];
     DrawRectangle(i * cellWidth + 20,
@@ -190,12 +226,13 @@ void UpdateDrawFrame(ScreenVisualizer *sv) {
   DrawRectangle(20, sv->screenHeight - 40, sv->screenWidth - 40, 12, LIGHTGRAY);
   DrawRectangle(20, sv->screenHeight - 40, (int)mv.timeplayed, 12, MAROON);
   DrawRectangleLines(20, sv->screenHeight - 40, sv->screenWidth - 40, 12, GRAY);
-
+  draw_menu();
+  open_menu(sv);
   EndDrawing();
 }
 
 void DestroyMusic() {
-  DetachAudioStreamProcessor(mv.music.stream, ProcessAudio);
+  DetachAudioStreamProcessor(mv.music.stream, process_audio);
   UnloadMusicStream(mv.music);
   CloseAudioDevice();
 }
