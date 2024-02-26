@@ -6,12 +6,12 @@
 #include "screen.h"
 
 #define ARRAY_LEN(xs) sizeof(xs) / sizeof(xs[0])
-#define N (1 << 13)
-
-typedef struct MusicVisualizer {
-  Music music;
-  float volume, timeplayed, frameTime, smoothness;
-} MusicVisualizer;
+#define BUFFER_SIZE (1 << 13)
+#ifdef PLATFORM_WEB
+#define TEXT_SIZE 20
+#else
+#define TEXT_SIZE 18
+#endif
 
 void CreateMusic();
 void UpdateDrawFrame(ScreenVisualizer *sv);

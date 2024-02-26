@@ -1,5 +1,12 @@
 #include "visual.h"
-#include <raylib.h>
+
+typedef float complex Cplx;
+typedef struct {
+  Music music;
+  float volume, timeplayed, frameTime, smoothness, outLog[BUFFER_SIZE],
+      smooth[BUFFER_SIZE], window[BUFFER_SIZE], in[BUFFER_SIZE];
+  Cplx out[BUFFER_SIZE];
+} MusicVisualizer;
 
 MusicVisualizer mv = {
     .volume = 0.2f,
@@ -7,17 +14,14 @@ MusicVisualizer mv = {
     .smoothness = 8.,
 };
 
-float complex out[N];
-float outLog[N], smooth[N], window[N], in[N];
-
-float Amp(float complex z) {
+float Amp(Cplx z) {
   float a = crealf(z);
   float b = cimagf(z);
   return logf(a * a + b * b);
   // return cabsf(z);
 }
 
-void Fft(float in[], size_t stride, float complex out[], size_t n) {
+void Fft(float in[], size_t stride, Cplx out[], size_t n) {
   assert(n > 0);
   if (n == 1) {
     out[0] = in[0];
@@ -28,8 +32,8 @@ void Fft(float in[], size_t stride, float complex out[], size_t n) {
   Fft(in + stride, stride * 2, out + n / 2, n / 2);
   for (size_t k = 0; k < n / 2; ++k) {
     float t = (float)k / n;
-    float complex v = cexp(-2 * I * PI * t) * out[k + n / 2];
-    float complex e = out[k];
+    Cplx v = cexp(-2 * I * PI * t) * out[k + n / 2];
+    Cplx e = out[k];
     out[k] = e + v;
     out[k + n / 2] = e - v;
   }
@@ -38,14 +42,17 @@ void Fft(float in[], size_t stride, float complex out[], size_t n) {
 void ProcessAudio(void *buffer, unsigned int frames) {
   float(*frame)[2] = buffer;
   for (size_t i = 0; i < frames; ++i) {
-    memmove(in, in + 1, (N - 1) * sizeof(in[0]));
-    in[N - 1] = frame[i][0];
+    memmove(mv.in, mv.in + 1, (BUFFER_SIZE - 1) * sizeof(mv.in[0]));
+    mv.in[BUFFER_SIZE - 1] = frame[i][0];
   }
 }
 
 void ClearSamples() {
-  memset(in, 0, N);
-  memset(out, 0, N);
+  memset(mv.in, 0, sizeof(mv.in));
+  memset(mv.out, 0, sizeof(mv.out));
+  memset(mv.outLog, 0, sizeof(mv.outLog));
+  memset(mv.window, 0, sizeof(mv.window));
+  memset(mv.smooth, 0, sizeof(mv.smooth));
 }
 
 void CreateMusic() {
@@ -122,43 +129,60 @@ void UpdateDrawFrame(ScreenVisualizer *sv) {
 
   // Hann Windowing :
   // https://stackoverflow.com/questions/3555318/implement-hann-window
-  for (size_t i = 0; i < N; ++i) {
-    float t = (float)i / N;
+  for (size_t i = 0; i < BUFFER_SIZE; ++i) {
+    float t = (float)i / BUFFER_SIZE;
     float multiplier = 0.5 * (1 - cos(2 * PI * t));
-    window[i] = in[i] * multiplier;
+    mv.window[i] = mv.in[i] * multiplier;
   }
 
-  Fft(window, 1, out, N);
+  Fft(mv.window, 1, mv.out, BUFFER_SIZE);
 
   float max_amp = 1.0f;
   float step = 1.06;
   float lowFreq = 1.0f;
   size_t m = 0;
-  for (float freq = lowFreq; (size_t)freq < N / 2; freq = ceilf(freq * step)) {
+  for (float freq = lowFreq; (size_t)freq < BUFFER_SIZE / 2;
+       freq = ceilf(freq * step)) {
     float f = ceilf(freq * step);
     float a = 0.0f;
-    for (size_t q = (size_t)freq; q < N / 2 && q < (size_t)f; ++q) {
-      float b = Amp(out[q]);
+    for (size_t q = (size_t)freq; q < BUFFER_SIZE / 2 && q < (size_t)f; ++q) {
+      float b = Amp(mv.out[q]);
       if (b > a)
         a = b;
     }
     if (max_amp < a)
       max_amp = a;
-    outLog[m++] = a;
+    mv.outLog[m++] = a;
   }
 
   float frameTime = GetFrameTime();
   for (size_t i = 0; i < m; ++i) {
-    outLog[i] /= max_amp;
+    mv.outLog[i] /= max_amp;
 
-    smooth[i] += (outLog[i] - smooth[i]) * mv.smoothness * frameTime;
+    mv.smooth[i] += (mv.outLog[i] - mv.smooth[i]) * mv.smoothness * frameTime;
   }
 
   float cellWidth = (float)sv->screenWidth / m;
   BeginDrawing();
   ClearBackground(RAYWHITE);
+
+  DrawText("Press SPACE to PLAY/STOP Music", 20, 60, TEXT_SIZE, BLACK);
+  DrawText("Press P to pause Music", 20, 80, TEXT_SIZE, BLACK);
+  DrawText("Press ARROW UP / ARROW DOWN to change volume", 20, 100, TEXT_SIZE,
+           BLACK);
+  DrawText("Drag Music for play another Music", 20, 120, TEXT_SIZE, BLACK);
+
+  DrawText(TextFormat("VOLUME: %.2f%%", mv.volume * 100), 20, 140, TEXT_SIZE,
+           MAROON);
+  DrawText(TextFormat("%.02d : %.02d - %.02d : %.02d", minutes, seconds,
+                      minutesLength, secondsLength),
+           20, sv->screenHeight - 25, TEXT_SIZE, BLACK);
+
+  for (size_t i = 1; i <= 3; ++i) {
+    DrawRectangle(20, 8 * i, 50, 5, MAROON);
+  }
   for (size_t i = 0; i < m; ++i) {
-    float t = smooth[i];
+    float t = mv.smooth[i];
     DrawRectangle(i * cellWidth + 20,
                   (sv->screenHeight - 40) - (float)sv->screenHeight / 3 * t,
                   cellWidth - 1, (float)sv->screenHeight / 3 * t, MAROON);
@@ -166,14 +190,7 @@ void UpdateDrawFrame(ScreenVisualizer *sv) {
   DrawRectangle(20, sv->screenHeight - 40, sv->screenWidth - 40, 12, LIGHTGRAY);
   DrawRectangle(20, sv->screenHeight - 40, (int)mv.timeplayed, 12, MAROON);
   DrawRectangleLines(20, sv->screenHeight - 40, sv->screenWidth - 40, 12, GRAY);
-  DrawText(TextFormat("%.02d : %.02d - %.02d : %.02d", minutes, seconds,
-                      minutesLength, secondsLength),
-           20, sv->screenHeight - 25, 20, BLACK);
-  DrawText("Press SPACE to PLAY/STOP Music", 40, 40, 20, BLACK);
-  DrawText("Press P to pause Music", 40, 70, 20, BLACK);
-  DrawText("Press ARROW UP / ARROW DOWN to change volume", 40, 100, 20, BLACK);
-  DrawText("Drag Music for play another Music", 40, 130, 20, BLACK);
-  DrawText(TextFormat("VOLUME: %.2f%%", mv.volume * 100), 40, 160, 20, MAROON);
+
   EndDrawing();
 }
 
