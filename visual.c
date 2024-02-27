@@ -260,6 +260,7 @@ void action_key() {
 
 void update_draw_frame(ScreenVisualizer *sv) {
   UpdateMusicStream(mv.music);
+  sv->screenWidth = GetScreenWidth(), sv->screenHeight = GetScreenHeight();
   if (IsFileDropped()) {
     drag_and_drop_files();
   }
