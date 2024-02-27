@@ -3,23 +3,24 @@
 
 ScreenVisualizer sv = {.screenHeight = 600, .screenWidth = 800};
 
-void UpdateDrawFrameWrapper(void) { UpdateDrawFrame(&sv); }
+void update_draw_frame_wrapper(void) { update_draw_frame(&sv); }
 
 int main() {
   CreateWindow(&sv);
-  CreateMusic();
+  create_music();
 
 #if defined(PLATFORM_WEB)
-  emscripten_set_main_loop(UpdateDrawFrameWrapper, 0, 1);
+  emscripten_set_main_loop(update_draw_frame_wrapper, 0, 1);
 #else
   SetTargetFPS(60);
 
   while (!WindowShouldClose()) {
-    UpdateDrawFrameWrapper();
+    update_draw_frame_wrapper();
   }
 #endif /* if defined(PLATFORM_WEB) */
 
-  DestroyMusic();
+  destroy_music();
+  free_file_path();
   DestroyWindow();
 
   return 0;
