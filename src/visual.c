@@ -102,9 +102,9 @@ void create_music() {
 
   InitAudioDevice();
 
-  mv.file[0].filepath = "./videoplayback.ogg";
+  mv.file[0].filepath = "./assets/videoplayback.ogg";
   mv.file_count = 1;
-  mv.current_music_path = "./videoplayback.ogg";
+  mv.current_music_path = "./assets/videoplayback.ogg";
 
   mv.music = LoadMusicStream(mv.file[0].filepath);
 
