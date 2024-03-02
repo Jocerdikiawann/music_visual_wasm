@@ -27,6 +27,7 @@ if [ "$Platform" = "web" ] ; then
     emrun ./web/main.html
 elif [ "$Platform" = "android" ] ; then
     echo "Building for android..."
+    ./build_android.sh
 elif [ "$Platform" = "desktop" ] ; then
   echo "Building for desktop..."
   gcc -g ./src/main.c ./src/visual.c ./src/screen.c -o ./linux/main -lraylib -lGL -lm -lpthread -ldl -lrt -lX11

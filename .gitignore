@@ -4,3 +4,6 @@
 *.data
 main
 *.ogg
+*.keystore
+*.c.o
+*.apk

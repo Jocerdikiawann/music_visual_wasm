@@ -1,6 +1,55 @@
 #include "visual.h"
 
-typedef float complex Cplx;
+// TODO: Ubah Complex ke struct complex ini
+// typedef struct {
+//   float real;
+//   float imag;
+// } Complex;
+
+// Complex cexp(Complex z) {
+//   Complex result;
+//   float exp_val = expf(z.real);
+//   result.real = exp_val * cosf(z.imag);
+//   result.imag = exp_val * sinf(z.imag);
+//   return result;
+// }
+
+// Complex cmul(Complex a, Complex b) {
+//   Complex result;
+//   result.real = a.real * b.real - a.imag * b.imag;
+//   result.imag = a.real * b.imag + a.imag * b.real;
+//   return result;
+// }
+
+// void fft(float in[], size_t stride, Complex out[], size_t n) {
+//   assert(n > 0);
+//   if (n == 1) {
+//     out[0].real = in[0];
+//     out[0].imag = 0;
+//     return;
+//   }
+
+//   fft(in, stride * 2, out, n / 2);
+//   fft(in + stride, stride * 2, out + n / 2, n / 2);
+//   for (size_t k = 0; k < n / 2; ++k) {
+//     float t = (float)k / n;
+//     Complex x = (Complex){cosf(-2 * M_PI * t), sinf(-2 * M_PI * t)};
+//     Complex v = cmul(cexp(x), out[k + n / 2]);
+//     Complex e = out[k];
+//     out[k].real = e.real + v.real;
+//     out[k].imag = e.imag + v.imag;
+//     out[k + n / 2].real = e.real - v.real;
+//     out[k + n / 2].imag = e.imag - v.imag;
+//   }
+// }
+
+// float amp(Complex z) {
+//   float a = z.real;
+//   float b = z.imag;
+//   return logf(a * a + b * b);
+// }
+
+#define Cplx _Complex float
 
 typedef struct {
   char *filepath;
@@ -27,7 +76,6 @@ float amp(Cplx z) {
   float b = cimagf(z);
   return logf(a * a + b * b);
 }
-
 void fft(float in[], size_t stride, Cplx out[], size_t n) {
   assert(n > 0);
   if (n == 1) {
@@ -94,17 +142,19 @@ static int fft_analyze() {
 
 void create_music() {
 
+  InitAudioDevice();
+
   mv.file = (FilePath *)malloc(sizeof(FilePath) * MAX_FILEPATH_RECORDED);
   if (mv.file == NULL) {
-    TraceLog(LOG_ERROR, TextFormat("Failed Allocate memory at %d\n", __LINE__));
+    printf("Failed Allocate memory at %d\n", __LINE__);
     exit(1);
   }
 
-  InitAudioDevice();
+  char *path = "videoplayback.ogg";
 
-  mv.file[0].filepath = "./assets/videoplayback.ogg";
+  mv.file[0].filepath = path;
   mv.file_count = 1;
-  mv.current_music_path = "./assets/videoplayback.ogg";
+  mv.current_music_path = path;
 
   mv.music = LoadMusicStream(mv.file[0].filepath);
 
