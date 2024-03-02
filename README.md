@@ -8,7 +8,7 @@ Reference :
 
 - [ ] Android (WIP)
 - [x] Linux
-- [x] Web -WASM
+- [x] Web - WASM
 - [ ] Macos 💲❌
 - [ ] IOS 💲❌                                                                   
 
