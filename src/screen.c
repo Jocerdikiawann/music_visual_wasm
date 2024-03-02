@@ -1,13 +1,5 @@
 #include "screen.h"
 
-void konzolodon_t() {
-  InitAudioDevice();
-  char *file = (char *)malloc(sizeof(char *) * 200);
-  if (file == NULL) {
-    printf("Failed Allocate memory at %d\n", __LINE__);
-    exit(1);
-  }
-}
 void CreateWindow(ScreenVisualizer *sv) {
   SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_ALWAYS_RUN);
 
