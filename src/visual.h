@@ -6,7 +6,7 @@
 #include "screen.h"
 
 #define ARRAY_LEN(xs) sizeof(xs) / sizeof(xs[0])
-#define BUFFER_SIZE (1 << 13)
+#define BUFFER_SIZE 4096 //(1 << 13)
 #define MAX_FILEPATH_RECORDED 100
 
 #if defined(PLATFORM_WEB) // DEFINE PLATFORM_WEB

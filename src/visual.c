@@ -1,55 +1,8 @@
 #include "visual.h"
 
-// TODO: Ubah Complex ke struct complex ini
-// typedef struct {
-//   float real;
-//   float imag;
-// } Complex;
-
-// Complex cexp(Complex z) {
-//   Complex result;
-//   float exp_val = expf(z.real);
-//   result.real = exp_val * cosf(z.imag);
-//   result.imag = exp_val * sinf(z.imag);
-//   return result;
-// }
-
-// Complex cmul(Complex a, Complex b) {
-//   Complex result;
-//   result.real = a.real * b.real - a.imag * b.imag;
-//   result.imag = a.real * b.imag + a.imag * b.real;
-//   return result;
-// }
-
-// void fft(float in[], size_t stride, Complex out[], size_t n) {
-//   assert(n > 0);
-//   if (n == 1) {
-//     out[0].real = in[0];
-//     out[0].imag = 0;
-//     return;
-//   }
-
-//   fft(in, stride * 2, out, n / 2);
-//   fft(in + stride, stride * 2, out + n / 2, n / 2);
-//   for (size_t k = 0; k < n / 2; ++k) {
-//     float t = (float)k / n;
-//     Complex x = (Complex){cosf(-2 * M_PI * t), sinf(-2 * M_PI * t)};
-//     Complex v = cmul(cexp(x), out[k + n / 2]);
-//     Complex e = out[k];
-//     out[k].real = e.real + v.real;
-//     out[k].imag = e.imag + v.imag;
-//     out[k + n / 2].real = e.real - v.real;
-//     out[k + n / 2].imag = e.imag - v.imag;
-//   }
-// }
-
-// float amp(Complex z) {
-//   float a = z.real;
-//   float b = z.imag;
-//   return logf(a * a + b * b);
-// }
-
+#ifndef PLATFORM_ANDROID
 #define Cplx _Complex float
+#endif
 
 typedef struct {
   char *filepath;
@@ -61,22 +14,19 @@ typedef struct {
   Music music;
   float volume, timeplayed, frameTime, smoothness, outLog[BUFFER_SIZE],
       smooth[BUFFER_SIZE], window[BUFFER_SIZE], in[BUFFER_SIZE];
-  Cplx out[BUFFER_SIZE];
+  float out[BUFFER_SIZE];
   bool menu;
 } MusicVisualizer;
 
 MusicVisualizer mv = {
-    .volume = 0.2f,
+    .volume = 0.5f,
     .timeplayed = 0.0f,
     .smoothness = 8.,
 };
 
-float amp(Cplx z) {
-  float a = crealf(z);
-  float b = cimagf(z);
-  return logf(a * a + b * b);
-}
-void fft(float in[], size_t stride, Cplx out[], size_t n) {
+float amp(float a, float b) { return logf(a * a + b * b); }
+
+void fft(float in[], size_t stride, float out[], size_t n) {
   assert(n > 0);
   if (n == 1) {
     out[0] = in[0];
@@ -85,14 +35,45 @@ void fft(float in[], size_t stride, Cplx out[], size_t n) {
 
   fft(in, stride * 2, out, n / 2);
   fft(in + stride, stride * 2, out + n / 2, n / 2);
+
   for (size_t k = 0; k < n / 2; ++k) {
-    float t = (float)k / n;
-    Cplx v = cexp(-2 * I * PI * t) * out[k + n / 2];
-    Cplx e = out[k];
-    out[k] = e + v;
-    out[k + n / 2] = e - v;
+    float angle = -2 * PI * k / n;
+    float wkr = cos(angle);
+    float wim = sin(angle);
+
+    float vr = out[k];
+    float vi = out[k + n / 2];
+
+    float tr = vr + wkr * vi;
+    float ti = vi - wim * vr;
+
+    out[k] = tr;
+    out[k + n / 2] = ti;
   }
 }
+
+// float amp(Cplx z) {
+//   float a = crealf(z);
+//   float b = cimagf(z);
+//   return logf(a * a + b * b);
+// }
+// void fft(float in[], size_t stride, Cplx out[], size_t n) {
+//   assert(n > 0);
+//   if (n == 1) {
+//     out[0] = in[0];
+//     return;
+//   }
+
+//   fft(in, stride * 2, out, n / 2);
+//   fft(in + stride, stride * 2, out + n / 2, n / 2);
+//   for (size_t k = 0; k < n / 2; ++k) {
+//     float t = (float)k / n;
+//     Cplx v = cexp(-2 * I * PI * t) * out[k + n / 2];
+//     Cplx e = out[k];
+//     out[k] = e + v;
+//     out[k + n / 2] = e - v;
+//   }
+// }
 
 void process_audio(void *buffer, unsigned int frames) {
   float(*frame)[2] = buffer;
@@ -122,7 +103,7 @@ static int fft_analyze() {
     float f = ceilf(freq * step);
     float a = 0.0f;
     for (size_t q = (size_t)freq; q < BUFFER_SIZE / 2 && q < (size_t)f; ++q) {
-      float b = amp(mv.out[q]);
+      float b = amp(mv.out[q], 0.0f);
       if (b > a)
         a = b;
     }
