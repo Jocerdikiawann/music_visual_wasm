@@ -13,8 +13,8 @@ void CreateWindow(ScreenVisualizer *sv) {
   sv->screenWidth = factor * 16;
   sv->screenHeight = factor * 9;
 #elif defined(PLATFORM_ANROID)
-  sv->screenHeight = 800;
-  sv->screenWidth = 450;
+  sv->screenHeight = 0;
+  sv->screenWidth = 0;
 #endif
 
   InitWindow(sv->screenWidth, sv->screenHeight, sv->title);

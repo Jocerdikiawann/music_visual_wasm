@@ -1,12 +1,31 @@
 #include "visual.h"
 
-#ifndef PLATFORM_ANDROID
-#define Cplx _Complex float
+#ifdef PLATFORM_ANDROID
+#define size_music_rec_t 30
+#define Cplx complex_t
+#define ccabsf(z) ccabs(z)
+#define cfromreal(re) cvalue(re, 0)
+#define cfromimag(im) cvalue(0, im)
+#define cmul(a, b) cmultiply(a, b)
+#define ccexp(z) cexp(z)
+#define ccadd(a, b) cadd(a, b)
+#define ccsub(a, b) cdiff(a, b)
+#else
+#define size_music_rec_t 12
+#define Cplx float _Complex
+#define ccabsf(z) cabsf(z)
+#define cfromreal(re) (re)
+#define cfromimag(im) ((im) * I)
+#define cmul(a, b) ((a) * (b))
+#define ccexp(z) cexp(z)
+#define ccadd(a, b) ((a) + (b))
+#define ccsub(a, b) ((a) - (b))
 #endif
 
 typedef struct {
   char *filepath;
 } FilePath;
+
 typedef struct {
   FilePath *file;
   char *current_music_path;
@@ -14,22 +33,22 @@ typedef struct {
   Music music;
   float volume, timeplayed, frameTime, smoothness, outLog[BUFFER_SIZE],
       smooth[BUFFER_SIZE], window[BUFFER_SIZE], in[BUFFER_SIZE];
-  float out[BUFFER_SIZE];
+  Cplx out[BUFFER_SIZE];
   bool menu;
 } MusicVisualizer;
 
 MusicVisualizer mv = {
     .volume = 0.5f,
     .timeplayed = 0.0f,
-    .smoothness = 8.,
+    .smoothness = 6.,
 };
 
-float amp(float a, float b) { return logf(a * a + b * b); }
+float amp(Cplx z) { return logf(ccabsf(z)); }
 
-void fft(float in[], size_t stride, float out[], size_t n) {
+void fft(float in[], size_t stride, Cplx out[], size_t n) {
   assert(n > 0);
   if (n == 1) {
-    out[0] = in[0];
+    out[0] = cfromreal(in[0]);
     return;
   }
 
@@ -37,43 +56,13 @@ void fft(float in[], size_t stride, float out[], size_t n) {
   fft(in + stride, stride * 2, out + n / 2, n / 2);
 
   for (size_t k = 0; k < n / 2; ++k) {
-    float angle = -2 * PI * k / n;
-    float wkr = cos(angle);
-    float wim = sin(angle);
-
-    float vr = out[k];
-    float vi = out[k + n / 2];
-
-    float tr = vr + wkr * vi;
-    float ti = vi - wim * vr;
-
-    out[k] = tr;
-    out[k + n / 2] = ti;
+    float t = (float)k / n;
+    Cplx v = cmul(ccexp(cfromimag(-2 * PI * t)), out[k + n / 2]);
+    Cplx e = out[k];
+    out[k] = ccadd(e, v);
+    out[k + n / 2] = ccsub(e, v);
   }
 }
-
-// float amp(Cplx z) {
-//   float a = crealf(z);
-//   float b = cimagf(z);
-//   return logf(a * a + b * b);
-// }
-// void fft(float in[], size_t stride, Cplx out[], size_t n) {
-//   assert(n > 0);
-//   if (n == 1) {
-//     out[0] = in[0];
-//     return;
-//   }
-
-//   fft(in, stride * 2, out, n / 2);
-//   fft(in + stride, stride * 2, out + n / 2, n / 2);
-//   for (size_t k = 0; k < n / 2; ++k) {
-//     float t = (float)k / n;
-//     Cplx v = cexp(-2 * I * PI * t) * out[k + n / 2];
-//     Cplx e = out[k];
-//     out[k] = e + v;
-//     out[k + n / 2] = e - v;
-//   }
-// }
 
 void process_audio(void *buffer, unsigned int frames) {
   float(*frame)[2] = buffer;
@@ -87,7 +76,7 @@ static int fft_analyze() {
   // Hann Windowing :
   // https://stackoverflow.com/questions/3555318/implement-hann-window
   for (size_t i = 0; i < BUFFER_SIZE; ++i) {
-    float t = (float)i / BUFFER_SIZE;
+    float t = (float)i / BUFFER_SIZE - 1;
     float multiplier = 0.5 * (1 - cos(2 * PI * t));
     mv.window[i] = mv.in[i] * multiplier;
   }
@@ -98,12 +87,13 @@ static int fft_analyze() {
   float step = 1.06;
   float lowFreq = 1.0f;
   size_t m = 0;
+
   for (float freq = lowFreq; (size_t)freq < BUFFER_SIZE / 2;
        freq = ceilf(freq * step)) {
     float f = ceilf(freq * step);
     float a = 0.0f;
     for (size_t q = (size_t)freq; q < BUFFER_SIZE / 2 && q < (size_t)f; ++q) {
-      float b = amp(mv.out[q], 0.0f);
+      float b = amp(mv.out[q]);
       if (b > a)
         a = b;
     }
@@ -131,7 +121,7 @@ void create_music() {
     exit(1);
   }
 
-  char *path = "videoplayback.ogg";
+  char *path = "idol.ogg";
 
   mv.file[0].filepath = path;
   mv.file_count = 1;
@@ -289,6 +279,28 @@ void action_key() {
   }
 }
 
+void draw_text_option(ScreenVisualizer *sv) {
+  int minutes = GetMusicTimePlayed(mv.music) / 60;
+  int seconds = GetMusicTimePlayed(mv.music) - (minutes * 60);
+
+  int minutesLength = GetMusicTimeLength(mv.music) / 60;
+  int secondsLength = GetMusicTimeLength(mv.music) - (minutesLength * 60);
+
+  // TODO:MEASURE TEXT
+  DrawText("Press SPACE to PLAY/STOP Music", 20, sv->screenHeight * 0.5,
+           TEXT_SIZE, BLACK);
+  // DrawText("Press P to pause Music", 20, 60 * 2, TEXT_SIZE, BLACK);
+  // DrawText("Press ARROW UP / ARROW DOWN to change volume", 20, 60 * 3,
+  //          TEXT_SIZE, BLACK);
+  // DrawText("Drag Music for play another Music", 20, 60 * 4, TEXT_SIZE,
+  // BLACK); DrawText(TextFormat("VOLUME: %.2f%%", mv.volume * 100), 20, 60 * 5,
+  // TEXT_SIZE,
+  //          MAROON);
+  // DrawText(TextFormat("%.02d : %.02d - %.02d : %.02d", minutes, seconds,
+  //                     minutesLength, secondsLength),
+  //          20, sv->screenHeight - 25, TEXT_SIZE, BLACK);
+}
+
 void update_draw_frame(ScreenVisualizer *sv) {
   UpdateMusicStream(mv.music);
   sv->screenWidth = GetScreenWidth(), sv->screenHeight = GetScreenHeight();
@@ -302,11 +314,6 @@ void update_draw_frame(ScreenVisualizer *sv) {
 
   mv.timeplayed = GetMusicTimePlayed(mv.music) / GetMusicTimeLength(mv.music) *
                   (sv->screenWidth - 40);
-  int minutes = GetMusicTimePlayed(mv.music) / 60;
-  int seconds = GetMusicTimePlayed(mv.music) - (minutes * 60);
-
-  int minutesLength = GetMusicTimeLength(mv.music) / 60;
-  int secondsLength = GetMusicTimeLength(mv.music) - (minutesLength * 60);
 
   size_t m = fft_analyze();
 
@@ -318,16 +325,7 @@ void update_draw_frame(ScreenVisualizer *sv) {
     DrawText("Drop Music", sv->screenHeight / 2, sv->screenWidth / 2, TEXT_SIZE,
              BLACK);
   } else {
-    DrawText("Press SPACE to PLAY/STOP Music", 20, 60, TEXT_SIZE, BLACK);
-    DrawText("Press P to pause Music", 20, 80, TEXT_SIZE, BLACK);
-    DrawText("Press ARROW UP / ARROW DOWN to change volume", 20, 100, TEXT_SIZE,
-             BLACK);
-    DrawText("Drag Music for play another Music", 20, 120, TEXT_SIZE, BLACK);
-    DrawText(TextFormat("VOLUME: %.2f%%", mv.volume * 100), 20, 140, TEXT_SIZE,
-             MAROON);
-    DrawText(TextFormat("%.02d : %.02d - %.02d : %.02d", minutes, seconds,
-                        minutesLength, secondsLength),
-             20, sv->screenHeight - 25, TEXT_SIZE, BLACK);
+    draw_text_option(sv);
 
     for (size_t i = 0; i < m; ++i) {
       float t = mv.smooth[i];
@@ -335,11 +333,13 @@ void update_draw_frame(ScreenVisualizer *sv) {
                     (sv->screenHeight - 40) - (float)sv->screenHeight / 3 * t,
                     cellWidth - 1, (float)sv->screenHeight / 3 * t, MAROON);
     }
-    DrawRectangle(20, sv->screenHeight - 40, sv->screenWidth - 40, 12,
-                  LIGHTGRAY);
-    DrawRectangle(20, sv->screenHeight - 40, (int)mv.timeplayed, 12, MAROON);
-    DrawRectangleLines(20, sv->screenHeight - 40, sv->screenWidth - 40, 12,
-                       GRAY);
+
+    DrawRectangle(20, sv->screenHeight - 40, sv->screenWidth - 40,
+                  size_music_rec_t, LIGHTGRAY);
+    DrawRectangle(20, sv->screenHeight - 40, (int)mv.timeplayed,
+                  size_music_rec_t, MAROON);
+    DrawRectangleLines(20, sv->screenHeight - 40, sv->screenWidth - 40,
+                       size_music_rec_t, GRAY);
     draw_menu();
     open_menu(sv);
   }

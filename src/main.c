@@ -6,6 +6,7 @@ ScreenVisualizer sv = {.screenHeight = 0, .screenWidth = 0};
 void update_draw_frame_wrapper(void) { update_draw_frame(&sv); }
 
 int main() {
+  ChangeDirectory("assets");
   CreateWindow(&sv);
   create_music();
 

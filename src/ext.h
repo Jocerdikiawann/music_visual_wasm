@@ -7,7 +7,6 @@
 #include <emscripten.h>
 #endif /* ifdef  defined(PLATFORM_WEB) */
 #include "assert.h"
-#include <complex.h>
 #include <math.h>
 #include <raylib.h>
 #include <stdio.h>
