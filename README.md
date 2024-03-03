@@ -6,7 +6,7 @@ Reference :
 
 ### Build Target
 
-- [ ] Android (WIP)
+- [x] Android
 - [x] Linux
 - [x] Web - WASM
 - [ ] Macos 💲❌
