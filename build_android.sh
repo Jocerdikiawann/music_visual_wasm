@@ -19,6 +19,7 @@ FLAGS="-ffunction-sections -funwind-tables -fstack-protector-strong -fPIC -Wall 
 	-Wformat -Werror=format-security -no-canonical-prefixes \
 	-DANDROID -DPLATFORM_ANDROID -DMA_DEBUG_OUTPUT -D__ANDROID_API__=$ANDROID_VERSION_API"
 
+# Include JNI
 INCLUDES="-I. -Iinclude -I../include -I$NATIVE_APP_GLUE -I$TOOLCHAIN/sysroot/usr/include"
 
 # Copy icons

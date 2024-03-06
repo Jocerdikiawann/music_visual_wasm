@@ -1,42 +1,5 @@
 #include "visual.h"
 
-#ifdef PLATFORM_ANDROID
-#define size_music_rec_t 30
-#define Cplx complex_t
-#define ccabsf(z) ccabs(z)
-#define cfromreal(re) cvalue(re, 0)
-#define cfromimag(im) cvalue(0, im)
-#define cmul(a, b) cmultiply(a, b)
-#define ccexp(z) cexp(z)
-#define ccadd(a, b) cadd(a, b)
-#define ccsub(a, b) cdiff(a, b)
-#else
-#define size_music_rec_t 12
-#define Cplx float _Complex
-#define ccabsf(z) cabsf(z)
-#define cfromreal(re) (re)
-#define cfromimag(im) ((im) * I)
-#define cmul(a, b) ((a) * (b))
-#define ccexp(z) cexp(z)
-#define ccadd(a, b) ((a) + (b))
-#define ccsub(a, b) ((a) - (b))
-#endif
-
-typedef struct {
-  char *filepath;
-} FilePath;
-
-typedef struct {
-  FilePath *file;
-  char *current_music_path;
-  int file_count;
-  Music music;
-  float volume, timeplayed, frameTime, smoothness, outLog[BUFFER_SIZE],
-      smooth[BUFFER_SIZE], window[BUFFER_SIZE], in[BUFFER_SIZE];
-  Cplx out[BUFFER_SIZE];
-  bool menu;
-} MusicVisualizer;
-
 MusicVisualizer mv = {
     .volume = 0.5f,
     .timeplayed = 0.0f,
@@ -111,29 +74,6 @@ static int fft_analyze() {
   return m;
 }
 
-void create_music() {
-
-  InitAudioDevice();
-
-  mv.file = (FilePath *)malloc(sizeof(FilePath) * MAX_FILEPATH_RECORDED);
-  if (mv.file == NULL) {
-    printf("Failed Allocate memory at %d\n", __LINE__);
-    exit(1);
-  }
-
-  char *path = "idol.ogg";
-
-  mv.file[0].filepath = path;
-  mv.file_count = 1;
-  mv.current_music_path = path;
-
-  mv.music = LoadMusicStream(mv.file[0].filepath);
-
-  mv.music.looping = false;
-
-  AttachAudioStreamProcessor(mv.music.stream, process_audio);
-}
-
 void clear_samples() {
   memset(mv.in, 0, sizeof(mv.in));
   memset(mv.out, 0, sizeof(mv.out));
@@ -154,23 +94,52 @@ void load_music(char *filepath) {
 }
 
 void play_music() {
-  mv.music.looping = false;
   AttachAudioStreamProcessor(mv.music.stream, process_audio);
+  mv.music.looping = false;
   PlayMusicStream(mv.music);
 }
 
+void create_music() {
+
+  InitAudioDevice();
+
+  mv.file = (FilePath *)malloc(sizeof(FilePath) * MAX_FILEPATH_RECORDED);
+  if (mv.file == NULL) {
+    printf("Failed Allocate memory at %d\n", __LINE__);
+    exit(1);
+  }
+
+  clear_samples();
+
+  char *path = "porty.ogg";
+  mv.file[0].filepath = path;
+  mv.file_count = 1;
+  mv.current_music_path = path;
+  load_music(mv.file[mv.file_count - 1].filepath);
+}
+
 void open_menu(ScreenVisualizer *sv) {
+  int pos_y_menu = 35;
+#ifdef PLATFORM_ANDROID
+  pos_y_menu = 20 + ((8 * 3) * 2);
+#endif
+  Rectangle menu_box_boundary = {
+      .width = (float)sv->screenWidth / 3,
+      .height = sv->screenHeight * 0.8,
+      .x = 20,
+      .y = pos_y_menu,
+  };
+
   if (mv.menu) {
-    DrawRectangle(20, 35, sv->screenWidth / 3, sv->screenHeight * 0.8,
-                  RAYWHITE);
-    DrawRectangleLines(20, 35, (sv->screenWidth / 3), sv->screenHeight * 0.8,
-                       BLACK);
+    DrawRectangleRec(menu_box_boundary, RAYWHITE);
+    DrawRectangleLinesEx(menu_box_boundary, 1, BLACK);
+
     for (int i = 0, offset = 1; i < mv.file_count; ++i, ++offset) {
       Rectangle file_item_boundary = {
           .x = 25,
-          .y = 40 * offset,
+          .y = (menu_box_boundary.y + 5) * offset,
           .width = sv->screenWidth * 0.3,
-          .height = 25,
+          .height = TEXT_SIZE + 10,
       };
 
       Color box_color = LIGHTGRAY, text_color = BLACK;
@@ -202,25 +171,40 @@ void open_menu(ScreenVisualizer *sv) {
   }
 }
 
-void draw_menu() {
+void draw_menu(ScreenVisualizer *sv) {
+  int w = sv->screenWidth * 0.05, h = sv->screenHeight * .009;
+
   for (size_t i = 1; i <= 3; ++i) {
     Rectangle burger_item_boundary = {
         .x = 20,
         .y = 8,
-        .width = 50,
-        .height = 5,
+        .width = w,
+        .height = h,
     };
     Color burger_color = LIGHTGRAY;
-    if (GetMousePosition().y <= burger_item_boundary.y * 3 &&
-        GetMousePosition().y >= burger_item_boundary.y &&
+#ifdef PLATFORM_ANDROID
+    burger_item_boundary.y *= (i * 2);
+#elif PLATFORM_WEB
+
+    burger_item_boundary.y *= (i * 2);
+#else
+    if (IsWindowMaximized()) {
+      burger_item_boundary.y *= (i * 2);
+    } else {
+      burger_item_boundary.y *= i;
+    }
+#endif
+    if (GetMousePosition().y <=
+            burger_item_boundary.height * burger_item_boundary.height &&
+        GetMousePosition().y >= burger_item_boundary.height &&
         GetMousePosition().x >= burger_item_boundary.x &&
         GetMousePosition().x <= burger_item_boundary.width + 1) {
-      if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && i == 1) {
+      if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && i <= 3) {
         mv.menu = !mv.menu;
       }
       burger_color = MAROON;
     }
-    burger_item_boundary.y *= i;
+
     DrawRectangleRec(burger_item_boundary, mv.menu ? MAROON : burger_color);
   }
 }
@@ -286,24 +270,27 @@ void draw_text_option(ScreenVisualizer *sv) {
   int minutesLength = GetMusicTimeLength(mv.music) / 60;
   int secondsLength = GetMusicTimeLength(mv.music) - (minutesLength * 60);
 
-  // TODO:MEASURE TEXT
-  DrawText("Press SPACE to PLAY/STOP Music", 20, sv->screenHeight * 0.5,
-           TEXT_SIZE, BLACK);
-  // DrawText("Press P to pause Music", 20, 60 * 2, TEXT_SIZE, BLACK);
-  // DrawText("Press ARROW UP / ARROW DOWN to change volume", 20, 60 * 3,
-  //          TEXT_SIZE, BLACK);
-  // DrawText("Drag Music for play another Music", 20, 60 * 4, TEXT_SIZE,
-  // BLACK); DrawText(TextFormat("VOLUME: %.2f%%", mv.volume * 100), 20, 60 * 5,
-  // TEXT_SIZE,
-  //          MAROON);
-  // DrawText(TextFormat("%.02d : %.02d - %.02d : %.02d", minutes, seconds,
-  //                     minutesLength, secondsLength),
-  //          20, sv->screenHeight - 25, TEXT_SIZE, BLACK);
+  int pos_y_menu = 60;
+  int pos_y_volume = sv->screenHeight - 25;
+#ifdef PLATFORM_ANDROID
+  pos_y_menu = 20 + ((8 * 3) * 2);
+  pos_y_volume = sv->screenHeight - 50;
+#endif
+  DrawText("Press SPACE to PLAY/STOP Music\nPress P to pause Music\nPress "
+           "ARROW UP / ARROW DOWN to change volume\n",
+           20, pos_y_menu, TEXT_SIZE, BLACK);
+  DrawText(TextFormat("VOLUME: %.2f%%", mv.volume * 100), 20,
+           text_measure(pos_y_menu), TEXT_SIZE, MAROON);
+  DrawText(TextFormat("%.02d : %.02d - %.02d : %.02d", minutes, seconds,
+                      minutesLength, secondsLength),
+           20, pos_y_volume, TEXT_SIZE, BLACK);
 }
 
 void update_draw_frame(ScreenVisualizer *sv) {
-  UpdateMusicStream(mv.music);
   sv->screenWidth = GetScreenWidth(), sv->screenHeight = GetScreenHeight();
+
+  UpdateMusicStream(mv.music);
+
   if (IsFileDropped()) {
     drag_and_drop_files();
   }
@@ -327,20 +314,25 @@ void update_draw_frame(ScreenVisualizer *sv) {
   } else {
     draw_text_option(sv);
 
+    int post_y_track = sv->screenHeight - 40;
+#ifdef PLATFORM_ANDROID
+    post_y_track = sv->screenHeight - 80;
+#endif
     for (size_t i = 0; i < m; ++i) {
       float t = mv.smooth[i];
       DrawRectangle(i * cellWidth + 20,
-                    (sv->screenHeight - 40) - (float)sv->screenHeight / 3 * t,
+                    (post_y_track) - (float)sv->screenHeight / 3 * t,
                     cellWidth - 1, (float)sv->screenHeight / 3 * t, MAROON);
     }
 
-    DrawRectangle(20, sv->screenHeight - 40, sv->screenWidth - 40,
-                  size_music_rec_t, LIGHTGRAY);
-    DrawRectangle(20, sv->screenHeight - 40, (int)mv.timeplayed,
-                  size_music_rec_t, MAROON);
-    DrawRectangleLines(20, sv->screenHeight - 40, sv->screenWidth - 40,
-                       size_music_rec_t, GRAY);
-    draw_menu();
+    DrawRectangle(20, post_y_track, sv->screenWidth - 40, size_music_rec_t,
+                  LIGHTGRAY);
+    DrawRectangle(20, post_y_track, (int)mv.timeplayed, size_music_rec_t,
+                  MAROON);
+    DrawRectangleLines(20, post_y_track, sv->screenWidth - 40, size_music_rec_t,
+                       GRAY);
+
+    draw_menu(sv);
     open_menu(sv);
   }
 

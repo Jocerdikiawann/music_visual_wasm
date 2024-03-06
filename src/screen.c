@@ -3,21 +3,22 @@
 void CreateWindow(ScreenVisualizer *sv) {
   SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_ALWAYS_RUN);
 
-  int factor = 70;
-#if defined(PLATFORM_WEB)
   int display = GetCurrentMonitor(), fullWidth = GetMonitorWidth(display),
       fullHeight = GetMonitorHeight(display);
-  sv->screenHeight = fullHeight - 250;
-  sv->screenWidth = fullWidth - 40;
-#elif defined(PLATFORM_DESKTOP)
-  sv->screenWidth = factor * 16;
-  sv->screenHeight = factor * 9;
-#elif defined(PLATFORM_ANROID)
-  sv->screenHeight = 0;
-  sv->screenWidth = 0;
+
+#ifdef PLATFORM_WEB
+  fullHeight -= 250;
+  fullWidth -= 40;
+#elif PLATFORM_ANDROID
+  fullHeight = 0;
+  fullWidth = 0;
+#else
+  int factor = 70;
+  fullWidth = factor * 16;
+  fullHeight = factor * 9;
 #endif
 
-  InitWindow(sv->screenWidth, sv->screenHeight, sv->title);
+  InitWindow(fullWidth, fullHeight, sv->title);
 }
 
 void DestroyWindow() { CloseWindow(); }
