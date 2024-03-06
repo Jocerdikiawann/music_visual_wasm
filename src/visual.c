@@ -1,7 +1,6 @@
 #include "visual.h"
 
 MusicVisualizer mv = {
-    .volume = 0.5f,
     .timeplayed = 0.0f,
     .smoothness = 6.,
 };
@@ -102,6 +101,7 @@ void play_music() {
 void create_music() {
 
   InitAudioDevice();
+  mv.volume = GetMasterVolume();
 
   mv.file = (FilePath *)malloc(sizeof(FilePath) * MAX_FILEPATH_RECORDED);
   if (mv.file == NULL) {
@@ -297,7 +297,7 @@ void update_draw_frame(ScreenVisualizer *sv) {
 
   action_key();
 
-  SetMusicVolume(mv.music, mv.volume);
+  SetMasterVolume(mv.volume);
 
   mv.timeplayed = GetMusicTimePlayed(mv.music) / GetMusicTimeLength(mv.music) *
                   (sv->screenWidth - 40);
