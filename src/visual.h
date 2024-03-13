@@ -7,6 +7,7 @@
 #include <complex.h>
 #endif
 #include "ext.h"
+#include "jni_fn.h"
 #include "screen.h"
 
 #define ARRAY_LEN(xs) sizeof(xs) / sizeof(xs[0])

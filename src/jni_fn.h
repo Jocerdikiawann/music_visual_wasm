@@ -9,8 +9,10 @@
 
 typedef struct {
   JavaVM *jvm;
+  JNIEnv *env;
+  jobject activity;
 } JNI_DATA;
 
-char *open_dir();
+void open_dir();
 
 #endif // !JNI_FN
