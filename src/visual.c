@@ -111,9 +111,8 @@ void create_music() {
 
   clear_samples();
 
-  int path_capacity = 3;
-  char *path[4] = {"zenzen.ogg", "idol.ogg", "videoplayback.ogg", "porty.ogg"};
-  for (size_t i = 0; i <= path_capacity; ++i) {
+  char *path[] = {"zenzen.ogg", "idol.ogg", "videoplayback.ogg", "porty.ogg"};
+  for (size_t i = 0; i < 4; ++i) {
     mv.file[i].filepath = path[i];
     mv.file_count = i;
   }
@@ -204,8 +203,8 @@ void draw_menu(ScreenVisualizer *sv) {
         GetMousePosition().x >= burger_item_boundary.x &&
         GetMousePosition().x <= burger_item_boundary.width + 1) {
       if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && i <= 3) {
-        open_dir();
-        // mv.menu = !mv.menu;
+        // open_dir();
+        mv.menu = !mv.menu;
       }
       burger_color = MAROON;
     }

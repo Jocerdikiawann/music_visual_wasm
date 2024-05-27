@@ -4,35 +4,35 @@ static const char *ACTION_GET_CONTENT = "android.intent.action.GET_CONTENT";
 static const int REQUEST_CODE_PICK_FILE = 1;
 JNI_DATA jd = {};
 
-JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
-  TraceLog(LOG_ERROR, "INITIALIZE JNI");
+// JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
+//   TraceLog(LOG_ERROR, "INITIALIZE JNI");
 
-  JNIEnv *env;
-  jd.jvm = vm;
+//   JNIEnv *env;
+//   jd.jvm = vm;
 
-  if (jd.jvm == NULL) {
-    TraceLog(LOG_ERROR, "Invalid Java VM");
-  }
+//   if (jd.jvm == NULL) {
+//     TraceLog(LOG_ERROR, "Invalid Java VM");
+//   }
 
-  // NOTE: set Java environment
-  int status;
-  status = (*jd.jvm)->GetEnv(jd.jvm, (void **)&jd.env, JNI_VERSION_1_6);
-  if (status < 0) {
-    TraceLog(LOG_ERROR, "Failed to get JNI environment, try to attach thread");
-    status = (*jd.jvm)->AttachCurrentThread(jd.jvm, &jd.env, NULL);
-    if (status < 0) {
-      TraceLog(LOG_ERROR, "Failed to attach current thread");
-    }
-  }
+//   // NOTE: set Java environment
+//   int status;
+//   status = (*jd.jvm)->GetEnv(jd.jvm, (void **)&jd.env, JNI_VERSION_1_6);
+//   if (status < 0) {
+//     TraceLog(LOG_ERROR, "Failed to get JNI environment, try to attach
+//     thread"); status = (*jd.jvm)->AttachCurrentThread(jd.jvm, &jd.env, NULL);
+//     if (status < 0) {
+//       TraceLog(LOG_ERROR, "Failed to attach current thread");
+//     }
+//   }
 
-  if (jd.env == 0) {
-    TraceLog(LOG_ERROR, "Couldn't get JNI env");
-  }
+//   if (jd.env == 0) {
+//     TraceLog(LOG_ERROR, "Couldn't get JNI env");
+//   }
 
-  return JNI_VERSION_1_6;
-}
+//   return JNI_VERSION_1_6;
+// }
 
-void android_main(struct android_app *state) { jd.app = state; }
+// void android_main(struct android_app *state) { jd.app = state; }
 
 void open_dir() {
   jclass intent_class = (*jd.env)->FindClass(jd.env, "android/content/Intent");

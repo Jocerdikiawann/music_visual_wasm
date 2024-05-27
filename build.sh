@@ -23,7 +23,7 @@ shift $((OPTIND -1))
 
 if [ "$Platform" = "web" ] ; then
     echo "Building for web..."
-    emcc -o ./web/main.html ./src/main.c ./src/visual.c ./src/screen.c -Os -Wall -Wextra $HOME/Documents/raylib/src/libraylib.a -I. -I$HOME/Documents/raylib/src/ -L. -L$HOME/Documents/raylib/src/ -s USE_GLFW=3 -s ASYNCIFY --shell-file $HOME/Documents/raylib/src/shell.html -DPLATFORM_WEB --preload-file ./assets/porty.ogg -s FORCE_FILESYSTEM=1 -s ALLOW_MEMORY_GROWTH=1
+    emcc -o ./web/main.html ./src/main.c ./src/visual.c ./src/screen.c -Os -Wall -Wextra $HOME/Documents/raylib/src/libraylib.a -I. -I$HOME/Documents/raylib/src/ -L. -L$HOME/Documents/raylib/src/ -s USE_GLFW=3 -s ASYNCIFY --shell-file $HOME/Documents/raylib/src/shell.html -DPLATFORM_WEB --preload-file ./assets/zenzen.ogg -s FORCE_FILESYSTEM=1 -s ALLOW_MEMORY_GROWTH=1
     emrun ./web/main.html
 elif [ "$Platform" = "android" ] ; then
     echo "Building for android..."
